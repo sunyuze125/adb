@@ -1,0 +1,696 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>快手视频/图集无水印解析下载器</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .input-section {
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        .input-section input {
+            padding: 8px 15px;
+            width: 60%;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 16px;
+        }
+        .input-section button {
+            padding: 8px 16px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            margin-left: 10px;
+        }
+        .input-section button:hover {
+            background-color: #45a049;
+        }
+        .video-info {
+            margin-bottom: 20px;
+            padding: 15px;
+            background-color: #f9f9f9;
+            border-radius: 5px;
+            position: relative;
+        }
+        .video-info h2 {
+            margin-top: 0;
+            margin-bottom: 10px;
+        }
+        .video-info p {
+            margin: 5px 0;
+        }
+        .download-section {
+            margin-top: 15px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        .download-btn {
+            padding: 5px 10px;
+            background-color: #2196F3;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .download-btn:hover {
+            background-color: #0b7dda;
+        }
+        .download-video-btn {
+            display: none;
+        }
+        .download-image-btn, .download-all-btn {
+            display: none;
+        }
+        .cover-image {
+            width: 100%;
+            max-height: 300px;
+            object-fit: cover;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+        .video-container {
+            width: 100%;
+            height: 400px;
+            margin-bottom: 20px;
+        }
+        .image-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+        .image-item {
+            position: relative;
+            overflow: hidden;
+            border-radius: 5px;
+            height: 150px;
+            cursor: pointer;
+        }
+        .image-item img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: transform 0.3s;
+        }
+        .image-item img:hover {
+            transform: scale(1.05);
+        }
+        .pagination {
+            display: flex;
+            justify-content: center;
+            margin-top: 20px;
+        }
+        .pagination button {
+            padding: 8px 16px;
+            margin: 0 5px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .pagination button:hover {
+            background-color: #45a049;
+        }
+        .pagination button:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+        }
+        .loading {
+            text-align: center;
+            margin: 20px 0;
+            display: none;
+        }
+        .loading.active {
+            display: block;
+        }
+        .spinner {
+            border: 5px solid #f3f3f3;
+            border-top: 5px solid #3498db;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .error-message {
+            color: red;
+            text-align: center;
+            margin: 15px 0;
+            display: none;
+        }
+        .tip-message {
+            color: #666;
+            text-align: center;
+            margin: 15px 0;
+            display: none;
+            background-color: #f8f8f8;
+            padding: 10px;
+            border-radius: 4px;
+        }
+        .close-tip {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+
+        /* 弹窗样式 */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+        }
+
+        .modal-content {
+            background-color: white;
+            margin: 10% auto;
+            padding: 20px;
+            width: 90%;
+            max-width: 500px;
+            border-radius: 8px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+            overflow-y: auto;
+            max-height: 80vh;
+        }
+
+        .modal h2 {
+            margin-top: 0;
+            color: #333;
+        }
+
+        .modal p {
+            margin: 15px 0;
+            line-height: 1.6;
+            color: #555;
+        }
+
+        .modal-buttons {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .agree-btn, .disagree-btn {
+            padding: 8px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        .agree-btn {
+            background-color: #4CAF50;
+            color: white;
+        }
+
+        .agree-btn:hover {
+            background-color: #45a049;
+        }
+
+        .disagree-btn {
+            background-color: #f44336;
+            color: white;
+        }
+
+        .disagree-btn:hover {
+            background-color: #d32f2f;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>快手视频/图集无水印解析下载器</h1>
+        <p>提示：该工具在服务器繁忙时可能导致解析失败</p>
+        <div class="input-section">
+            <input type="text" id="video-url" placeholder="请输入快手视频链接">
+            <button id="parse-btn">解析视频</button>
+        </div>
+        
+        <div class="error-message" id="error-message">
+            请输入有效的快手视频链接
+        </div>
+        
+        <div class="loading" id="loading">
+            <div class="spinner"></div>
+            <p>正在解析视频，请稍候...</p>
+        </div>
+        
+        <div class="tip-message" id="tip-message">
+            <span id="tip-content"></span>
+            <span class="close-tip" id="close-tip">×</span>
+        </div>
+        
+        <div id="content" style="display: none;">
+            <div class="video-info">
+                <h2 id="video-title">视频标题</h2>
+                <p><span id="parse-time">--</span></p>
+                
+                <div class="download-section">
+                    <button id="download-cover" class="download-btn">下载封面</button>
+                    <button id="download-video" class="download-btn download-video-btn">下载视频</button>
+                    <button id="download-image" class="download-btn download-image-btn">下载选中图片</button>
+                    <button id="download-all" class="download-btn download-all-btn">下载全部图片</button>
+                </div>
+            </div>
+            
+            <img id="cover-image" class="cover-image" src="" alt="视频封面">
+            
+            <div id="video-section" style="display: none;">
+                <video id="video-player" class="video-container" controls>
+                    您的浏览器不支持视频标签。
+                </video>
+            </div>
+            
+            <div id="image-section" style="display: none;">
+                <div class="image-grid" id="image-grid">
+                    <!-- 图片将通过JavaScript动态生成 -->
+                </div>
+                
+                <div class="pagination">
+                    <button id="prev-btn" disabled>上一页</button>
+                    <span id="page-info">第 1 页</span>
+                    <button id="next-btn">下一页</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 弹窗 -->
+    <div class="modal" id="disclaimer-modal">
+        <div class="modal-content">
+            <h2>免责声明</h2>
+            <p>本工具是一个快手无水印视频/图集解析下载工具，仅供个人学习、研究和欣赏使用。请务必遵守以下条款：</p>
+            <p>1. <strong>版权说明</strong>：快手平台上的所有视频和图集内容受版权法保护。使用本工具下载的内容，仅限于个人非商业用途。未经版权所有者明确授权，不得将下载的内容用于任何商业目的、公开传播或再次分发。</p>
+            <p>2. <strong>使用风险</strong>：本工具按照当前的状态提供，不保证其功能的准确性、可靠性或完整性。用户在使用过程中可能遇到的风险，包括但不限于数据丢失、隐私泄露等，需自行承担。</p>
+            <p>3. <strong>责任限制</strong>：在任何情况下，本工具的开发者、运营者或相关方均不对因使用或无法使用本工具而导致的直接、间接、附带、特殊或后果性的损失承担责任。</p>
+            <p>4. <strong>遵守法律</strong>：用户承诺在使用本工具时遵守所有适用的法律法规，包括但不限于版权法、知识产权法和网络使用规范。不得利用本工具进行任何违法或侵权的活动。</p>
+            <p>5. <strong>平台规则</strong>：快手平台可能有自己的使用条款和隐私政策。用户在使用本工具时，应同时遵守快手平台的相关规定。如果本工具的使用与快手平台的规则相冲突，用户应立即停止使用本工具。</p>
+            <p>6. <strong>修改与更新</strong>：本免责声明可能会随时更新。用户在每次使用本工具时，应查看最新的免责声明内容。</p>
+            <div class="modal-buttons">
+                <button class="agree-btn" id="agree-btn">同意并继续</button>
+                <button class="disagree-btn" id="disagree-btn">不同意</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // API 基础URL
+        const apiBaseUrl = 'https://api.cenguigui.cn/api/sp_jx/kuaishou.php?url=';
+        
+        // 每页显示的图片数量
+        const itemsPerPage = 12;
+        
+        // 全局变量
+        let allImages = [];
+        let currentPage = 1;
+        let currentVideoUrl = '';
+        let selectedImageIndex = -1;
+        let isDisclaimerAccepted = false;
+        
+        // 页面加载完成后执行
+        document.addEventListener('DOMContentLoaded', () => {
+            // 显示免责声明弹窗
+            showDisclaimerModal();
+            
+            // 尝试从粘贴板读取内容
+            readClipboard();
+            
+            // 绑定解析按钮点击事件
+            document.getElementById('parse-btn').addEventListener('click', parseVideo);
+            
+            // 绑定回车键事件
+            document.getElementById('video-url').addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    parseVideo();
+                }
+            });
+            
+            // 绑定分页按钮事件
+            document.getElementById('prev-btn').addEventListener('click', () => {
+                if (currentPage > 1) {
+                    currentPage--;
+                    renderPage(currentPage);
+                }
+            });
+            
+            document.getElementById('next-btn').addEventListener('click', () => {
+                const totalPages = Math.ceil(allImages.length / itemsPerPage);
+                if (currentPage < totalPages) {
+                    currentPage++;
+                    renderPage(currentPage);
+                }
+            });
+            
+            // 绑定下载按钮事件
+            document.getElementById('download-cover').addEventListener('click', downloadCover);
+            document.getElementById('download-video').addEventListener('click', downloadVideo);
+            document.getElementById('download-image').addEventListener('click', downloadSelectedImage);
+            document.getElementById('download-all').addEventListener('click', downloadAllImages);
+            
+            // 绑定关闭提示事件
+            document.getElementById('close-tip').addEventListener('click', () => {
+                document.getElementById('tip-message').style.display = 'none';
+            });
+            
+            // 绑定弹窗按钮事件
+            document.getElementById('agree-btn').addEventListener('click', () => {
+                isDisclaimerAccepted = true;
+                document.getElementById('disclaimer-modal').style.display = 'none';
+                document.getElementById('parse-btn').disabled = false;
+            });
+            
+            document.getElementById('disagree-btn').addEventListener('click', () => {
+                document.getElementById('disclaimer-modal').style.display = 'none';
+                document.getElementById('parse-btn').disabled = true;
+                showError('您已拒绝免责声明，无法使用本工具');
+            });
+            
+            // 点击弹窗外部区域关闭弹窗
+            document.getElementById('disclaimer-modal').addEventListener('click', (e) => {
+                if (e.target === document.getElementById('disclaimer-modal')) {
+                    document.getElementById('disclaimer-modal').style.display = 'none';
+                    document.getElementById('parse-btn').disabled = true;
+                    showError('您已关闭免责声明弹窗，无法使用本工具');
+                }
+            });
+        });
+        
+        // 显示免责声明弹窗
+        function showDisclaimerModal() {
+            document.getElementById('disclaimer-modal').style.display = 'block';
+            document.getElementById('parse-btn').disabled = true;
+        }
+        
+        // 从粘贴板读取内容
+        async function readClipboard() {
+            try {
+                const text = await navigator.clipboard.readText();
+                if (text) {
+                    const cleanedUrl = extractKuaishouUrl(text);
+                    if (cleanedUrl) {
+                        document.getElementById('video-url').value = cleanedUrl;
+                    }
+                }
+            } catch (err) {
+                console.error('Failed to read clipboard: ', err);
+            }
+        }
+        
+        // 提取快手链接
+        function extractKuaishouUrl(text) {
+            const kuaishouPatterns = [
+                /https?:\/\/v\.kuaishou\.com\/\w+/,
+                /https?:\/\/www\.kuaishou\.com\/\w+/,
+                /https?:\/\/kuaishou\.com\/\w+/
+            ];
+            
+            for (const pattern of kuaishouPatterns) {
+                const match = text.match(pattern);
+                if (match) {
+                    return match[0];
+                }
+            }
+            return null;
+        }
+        
+        // 解析视频函数
+        function parseVideo() {
+            // 检查是否已接受免责声明
+            if (!isDisclaimerAccepted) {
+                showError('请先阅读并同意免责声明');
+                return;
+            }
+            
+            let videoUrl = document.getElementById('video-url').value.trim();
+            
+            // 自动清理链接
+            videoUrl = extractKuaishouUrl(videoUrl) || videoUrl;
+            
+            // 验证输入是否为空
+            if (!videoUrl) {
+                showError('请输入视频链接');
+                return;
+            }
+            
+            // 验证是否是有效的快手视频链接
+            if (!isValidKuaishouUrl(videoUrl)) {
+                showError('请输入有效的快手视频链接');
+                return;
+            }
+            
+            // 隐藏错误信息
+            document.getElementById('error-message').style.display = 'none';
+            
+            // 保存当前视频链接
+            currentVideoUrl = videoUrl;
+            
+            // 重置分页
+            currentPage = 1;
+            
+            // 显示加载动画，隐藏内容
+            document.getElementById('loading').classList.add('active');
+            document.getElementById('content').style.display = 'none';
+            
+            // 获取数据
+            fetchData(apiBaseUrl + encodeURIComponent(videoUrl))
+                .then(data => {
+                    // 检查是否服务器繁忙
+                    if (data.code === 503) {
+                        throw new Error('服务器繁忙，请稍后再试');
+                    }
+                    
+                    // 更新页面标题和解析时间
+                    document.getElementById('video-title').textContent = data.data.title || '未知标题';
+                    document.getElementById('parse-time').textContent = data.text.time;
+                    
+                    // 设置封面图
+                    if (data.data.cover) {
+                        document.getElementById('cover-image').src = data.data.cover;
+                    }
+                    
+                    // 判断是视频还是图集
+                    if (data.data.url) {
+                        // 视频
+                        document.getElementById('video-section').style.display = 'block';
+                        document.getElementById('image-section').style.display = 'none';
+                        
+                        // 设置视频源
+                        document.getElementById('video-player').src = data.data.url;
+                        
+                        // 显示下载按钮
+                        document.getElementById('download-video').style.display = 'block';
+                        document.getElementById('download-image').style.display = 'none';
+                        document.getElementById('download-all').style.display = 'none';
+                        
+                        // 显示提示信息
+                        showTip('解析成功！您可以下载封面或视频。');
+                    } else if (data.data.images && data.data.images.length > 0) {
+                        // 图集
+                        document.getElementById('video-section').style.display = 'none';
+                        document.getElementById('image-section').style.display = 'block';
+                        
+                        // 保存所有图片数据
+                        allImages = data.data.images;
+                        
+                        // 初始化分页
+                        renderPage(currentPage);
+                        
+                        // 显示下载按钮
+                        document.getElementById('download-video').style.display = 'none';
+                        document.getElementById('download-image').style.display = 'block';
+                        document.getElementById('download-all').style.display = 'block';
+                        
+                        // 显示提示信息
+                        showTip('解析成功！点击图片选择要下载的内容，或下载全部图片。');
+                    } else {
+                        // 无效数据
+                        throw new Error('无法识别的解析结果');
+                    }
+                    
+                    // 显示下载封面按钮
+                    document.getElementById('download-cover').style.display = 'block';
+                    
+                    // 隐藏加载动画，显示内容
+                    document.getElementById('loading').classList.remove('active');
+                    document.getElementById('content').style.display = 'block';
+                })
+                .catch(error => {
+                    console.error('获取数据失败:', error);
+                    document.getElementById('loading').classList.remove('active');
+                    showError('解析失败: ' + error.message);
+                });
+        }
+        
+        // 验证是否是有效的快手视频链接
+        function isValidKuaishouUrl(url) {
+            const kuaishouPatterns = [
+                /https?:\/\/v\.kuaishou\.com\/\w+/,
+                /https?:\/\/www\.kuaishou\.com\/\w+/,
+                /https?:\/\/kuaishou\.com\/\w+/
+            ];
+            
+            return kuaishouPatterns.some(pattern => pattern.test(url));
+        }
+        
+        // 显示错误信息
+        function showError(message) {
+            document.getElementById('error-message').textContent = message;
+            document.getElementById('error-message').style.display = 'block';
+            document.getElementById('content').style.display = 'none';
+            document.getElementById('loading').classList.remove('active');
+        }
+        
+        // 获取数据函数
+        async function fetchData(url) {
+            try {
+                const response = await fetch(url);
+                if (!response.ok) {
+                    throw new Error(`HTTP 错误! 状态码: ${response.status}`);
+                }
+                return await response.json();
+            } catch (error) {
+                throw error;
+            }
+        }
+        
+        // 渲染页面函数
+        function renderPage(page) {
+            const start = (page - 1) * itemsPerPage;
+            const end = start + itemsPerPage;
+            const pageImages = allImages.slice(start, end);
+            
+            // 清空网格
+            const imageGrid = document.getElementById('image-grid');
+            imageGrid.innerHTML = '';
+            
+            // 添加图片到网格
+            pageImages.forEach((imgUrl, index) => {
+                const imageItem = document.createElement('div');
+                imageItem.className = 'image-item';
+                imageItem.innerHTML = `<img src="${imgUrl}" alt="图片 ${start + index + 1}">`;
+                
+                // 为每张图片添加点击事件
+                imageItem.addEventListener('click', () => {
+                    selectedImageIndex = start + index;
+                    alert(`已选择第 ${selectedImageIndex + 1} 张图片`);
+                });
+                
+                imageGrid.appendChild(imageItem);
+            });
+            
+            // 更新页码信息
+            document.getElementById('page-info').textContent = `第 ${page} 页`;
+            
+            // 更新按钮状态
+            document.getElementById('prev-btn').disabled = page <= 1;
+            const totalPages = Math.ceil(allImages.length / itemsPerPage);
+            document.getElementById('next-btn').disabled = page >= totalPages;
+        }
+        
+        // 下载封面图
+        function downloadCover() {
+            const coverImage = document.getElementById('cover-image');
+            if (coverImage.src) {
+                const link = document.createElement('a');
+                link.href = coverImage.src;
+                link.download = '快手封面.jpg';
+                link.click();
+                showTip('封面图下载成功！');
+            } else {
+                alert('封面图不可用');
+            }
+        }
+        
+        // 下载视频
+        function downloadVideo() {
+            const videoPlayer = document.getElementById('video-player');
+            if (videoPlayer.src) {
+                const link = document.createElement('a');
+                link.href = videoPlayer.src;
+                link.download = '快手视频.mp4';
+                link.click();
+                showTip('视频下载成功！');
+            } else {
+                alert('视频不可用');
+            }
+        }
+        
+        // 下载选中图片
+        function downloadSelectedImage() {
+            if (selectedImageIndex >= 0 && selectedImageIndex < allImages.length) {
+                const link = document.createElement('a');
+                link.href = allImages[selectedImageIndex];
+                link.download = `快手图片_${selectedImageIndex + 1}.jpg`;
+                link.click();
+                selectedImageIndex = -1; // 重置选中状态
+                showTip('图片下载成功！');
+            } else {
+                alert('请选择要下载的图片');
+            }
+        }
+        
+        // 下载全部图片
+        function downloadAllImages() {
+            if (allImages.length > 0) {
+                showTip(`即将下载全部 ${allImages.length} 张图片`);
+                allImages.forEach((imgUrl, index) => {
+                    const link = document.createElement('a');
+                    link.href = imgUrl;
+                    link.download = `快手图片_${index + 1}.jpg`;
+                    link.click();
+                });
+            } else {
+                alert('没有可下载的图片');
+            }
+        }
+        
+        // 显示提示信息
+        function showTip(message) {
+            document.getElementById('tip-content').textContent = message;
+            document.getElementById('tip-message').style.display = 'block';
+            
+            // 3秒后自动隐藏提示
+            setTimeout(() => {
+                document.getElementById('tip-message').style.display = 'none';
+            }, 3000);
+        }
+    </script>
+</body>
+</html>
